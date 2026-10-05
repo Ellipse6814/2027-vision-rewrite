@@ -1,0 +1,154 @@
+// Copyright (c) FIRST and other WPILib contributors.
+// Open Source Software; you can modify and/or share it under the terms of
+// the WPILib BSD license file in the root directory of this project.
+
+package frc.robot;
+
+import com.ctre.phoenix6.SignalLogger;
+import com.revrobotics.util.StatusLogger;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.Util.TrajectorySolver;
+import org.littletonrobotics.junction.LogFileUtil;
+import org.littletonrobotics.junction.LoggedPowerDistribution;
+import org.littletonrobotics.junction.LoggedRobot;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.NT4Publisher;
+import org.littletonrobotics.junction.wpilog.WPILOGReader;
+import org.littletonrobotics.junction.wpilog.WPILOGWriter;
+
+public class Robot extends LoggedRobot {
+  private Command m_autonomousCommand;
+
+  private final RobotContainer m_robotContainer;
+
+  public Robot() {
+    Logger.recordMetadata("ProjectName", BuildConstants.MAVEN_NAME);
+    Logger.recordMetadata("BuildDate", BuildConstants.BUILD_DATE);
+    Logger.recordMetadata("GitSHA", BuildConstants.GIT_SHA);
+    Logger.recordMetadata("GitDate", BuildConstants.GIT_DATE);
+    Logger.recordMetadata("GitBranch", BuildConstants.GIT_BRANCH);
+
+    switch (BuildConstants.DIRTY) {
+      case 0:
+        Logger.recordMetadata("GitDirty", "All changes committed");
+        break;
+
+      case 1:
+        Logger.recordMetadata("GitDirty", "Uncomitted changes");
+        break;
+
+      default:
+        Logger.recordMetadata("GitDirty", "Unknown");
+        break;
+    }
+
+    switch (Constants.currentMode) {
+      case REAL:
+        Logger.addDataReceiver(new WPILOGWriter());
+        Logger.addDataReceiver(new NT4Publisher());
+        break;
+
+      case REPLAY:
+        setUseTiming(false);
+        String logPath = LogFileUtil.findReplayLog();
+        Logger.setReplaySource(new WPILOGReader(logPath));
+        Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
+        break;
+
+        // Uncomment WPILOGWriter to log create a log of the sim
+      case SIM:
+        // Logger.addDataReceiver(new WPILOGWriter());
+        Logger.addDataReceiver(new NT4Publisher());
+        break;
+    }
+
+    LoggedPowerDistribution.getInstance(1, ModuleType.kRev);
+
+    Logger.start();
+    StatusLogger.disableAutoLogging();
+    SignalLogger.enableAutoLogging(false);
+
+    if (!Logger.hasReplaySource()) {
+      RobotController.setTimeSource(RobotController::getFPGATime);
+    }
+
+    m_robotContainer = new RobotContainer();
+
+    SmartDashboard.putData("Command Scheduler", CommandScheduler.getInstance());
+
+    TrajectorySolver.initEllashboardConnection();
+  }
+
+  @Override
+  public void robotPeriodic() {
+
+    // Threads.setCurrentThreadPriority(true, 99);
+
+    CommandScheduler.getInstance().run();
+    if (Constants.currentMode == Constants.Mode.SIM) {
+      m_robotContainer.updateSimulation();
+    }
+    RobotState.getRobotState().updateLogger();
+    DriveControls.getDriveControls().periodic();
+
+    // Threads.setCurrentThreadPriority(false, 10);  }
+
+  }
+
+  @Override
+  public void disabledInit() {
+    DriveControls.getDriveControls().setRumble(0);
+  }
+
+  @Override
+  public void disabledPeriodic() {}
+
+  @Override
+  public void disabledExit() {}
+
+  @Override
+  public void autonomousInit() {
+    m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+
+    if (m_autonomousCommand != null) {
+      CommandScheduler.getInstance().schedule(m_autonomousCommand);
+    }
+  }
+
+  @Override
+  public void autonomousPeriodic() {}
+
+  @Override
+  public void autonomousExit() {}
+
+  @Override
+  public void teleopInit() {
+    if (m_autonomousCommand != null) {
+      m_autonomousCommand.cancel();
+    }
+
+    DriveControls.getDriveControls().teleopInit();
+    // m_robotContainer.disableShooting();
+  }
+
+  @Override
+  public void teleopPeriodic() {}
+
+  @Override
+  public void teleopExit() {}
+
+  @Override
+  public void testInit() {
+    CommandScheduler.getInstance().cancelAll();
+  }
+
+  @Override
+  public void testPeriodic() {}
+
+  @Override
+  public void testExit() {}
+}
