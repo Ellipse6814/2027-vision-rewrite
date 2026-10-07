@@ -1406,6 +1406,10 @@ public class LimelightHelpers {
     return getLimelightNTDouble(limelightName, "tid");
   }
 
+  public static double[] getStdDevs(String limelightName) {
+    return getLimelightNTDoubleArray(limelightName, "stddevs");
+  }
+
   /**
    * Gets the Limelight heartbeat value. Increments once per frame, allowing you to detect if the
    * Limelight is connected and alive.

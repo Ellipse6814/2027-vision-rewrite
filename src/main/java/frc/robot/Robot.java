@@ -11,7 +11,8 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.Util.TrajectorySolver;
+import frc.robot.subsystems.vision.VisionNode;
+
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedPowerDistribution;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -79,8 +80,6 @@ public class Robot extends LoggedRobot {
     m_robotContainer = new RobotContainer();
 
     SmartDashboard.putData("Command Scheduler", CommandScheduler.getInstance());
-
-    TrajectorySolver.initEllashboardConnection();
   }
 
   @Override
@@ -92,17 +91,15 @@ public class Robot extends LoggedRobot {
     if (Constants.currentMode == Constants.Mode.SIM) {
       m_robotContainer.updateSimulation();
     }
-    RobotState.getRobotState().updateLogger();
-    DriveControls.getDriveControls().periodic();
+    VisionNode.periodic();
+    RobotState.updateLogger();
 
     // Threads.setCurrentThreadPriority(false, 10);  }
 
   }
 
   @Override
-  public void disabledInit() {
-    DriveControls.getDriveControls().setRumble(0);
-  }
+  public void disabledInit() {}
 
   @Override
   public void disabledPeriodic() {}
@@ -131,7 +128,6 @@ public class Robot extends LoggedRobot {
       m_autonomousCommand.cancel();
     }
 
-    DriveControls.getDriveControls().teleopInit();
     // m_robotContainer.disableShooting();
   }
 

@@ -5,9 +5,12 @@ import static edu.wpi.first.units.Units.DegreesPerSecond;
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.DoubleArraySubscriber;
 import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
@@ -21,10 +24,8 @@ import java.util.List;
 
 public class VisionIOLimelight implements VisionIO {
 
-  DoubleSubscriber latencySubscriberA;
-  DoubleArraySubscriber poseArraySubscriberA;
-
-  RobotState state = RobotState.getRobotState();
+  DoubleSubscriber latencySub;
+  DoubleArraySubscriber poseSub;
 
   String cameraName;
   Translation3d mountingTranslation;
@@ -36,29 +37,31 @@ public class VisionIOLimelight implements VisionIO {
     this.mountingTranslation = mountingTranslation;
     this.mountingRotation = mountingRotation;
 
-    NetworkTable TableA = NetworkTableInstance.getDefault().getTable(cameraName);
+    NetworkTable nt = NetworkTableInstance.getDefault().getTable(cameraName);
 
-    latencySubscriberA = TableA.getDoubleTopic("tl").subscribe(0.0);
-
-    poseArraySubscriberA =
-        TableA.getDoubleArrayTopic("botpose_orb_wpiblue").subscribe(new double[6]);
+    latencySub = nt.getDoubleTopic("tl").subscribe(0.0);
+    poseSub = nt.getDoubleArrayTopic("botpose_orb_wpiblue").subscribe(new double[6]);
 
     setCameraPosition();
   }
 
   @Override
-  public void readInputs(VisionInputs inputs) {
+  public void readInputs(AprilTagInputs inputs) {
 
     setRobotOrientation();
     inputs.cameraName = cameraName;
     inputs.cameraConnected =
-        ((Timer.getFPGATimestamp() - latencySubscriberA.getLastChange()) / 1000) < 250;
+        ((Timer.getFPGATimestamp() - latencySub.getLastChange()) / 1000) < 250;
 
     inputs.cameraHasTarget = LimelightHelpers.getTV(cameraName);
 
     List<PoseObservation> poseObservationsA = new LinkedList<>();
-    for (var sample : poseArraySubscriberA.readQueue()) {
+    for (var sample : poseSub.readQueue()) {
       if (sample.value.length == 0) continue;
+
+      double[] stddevsArray = LimelightHelpers.getStdDevs(cameraName);
+      Vector<N3> stddevsVec = VecBuilder.fill(stddevsArray[6], stddevsArray[7], stddevsArray[11]);
+
       poseObservationsA.add(
           new PoseObservation(
               (sample.timestamp * 1e-6) - (sample.value[6] * 1e-6),
@@ -67,6 +70,7 @@ public class VisionIOLimelight implements VisionIO {
               0.0,
               (int) sample.value[7],
               sample.value[9],
+              stddevsVec,
               PoseObservationType.MEGATAG_2));
     }
 
@@ -92,8 +96,8 @@ public class VisionIOLimelight implements VisionIO {
   public void setRobotOrientation() {
     LimelightHelpers.SetRobotOrientation(
         cameraName,
-        state.getLatestPose2d().getRotation().getDegrees(),
-        RadiansPerSecond.of(state.getFieldRelativeChassisSpeeds().omegaRadiansPerSecond)
+        RobotState.getLatestPose2d().getRotation().getDegrees(),
+        RadiansPerSecond.of(RobotState.getFieldRelativeChassisSpeeds().omegaRadiansPerSecond)
             .in(DegreesPerSecond),
         0,
         0,
@@ -116,6 +120,6 @@ public class VisionIOLimelight implements VisionIO {
   }
 
   protected AngularVelocity getCameraAngularVelocity() {
-    return RadiansPerSecond.of(state.getFieldRelativeChassisSpeeds().omegaRadiansPerSecond);
+    return RadiansPerSecond.of(RobotState.getFieldRelativeChassisSpeeds().omegaRadiansPerSecond);
   }
 }

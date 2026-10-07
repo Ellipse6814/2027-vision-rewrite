@@ -54,8 +54,6 @@ public class Drive extends SubsystemBase {
         new SwerveModulePosition()
       };
 
-  private final RobotState robotState;
-
   // private final SwerveSetpointGenerator setpointGenerator;
   // private SwerveSetpoint swerveSetpoint;
 
@@ -68,8 +66,6 @@ public class Drive extends SubsystemBase {
 
     this.GyroIO = gyroIO;
 
-    robotState = RobotState.getRobotState();
-
     modules[0] = new Module(frontLeftModule, 0, DriveConstants.FrontLeft);
     modules[1] = new Module(frontRightModule, 1, DriveConstants.FrontRight);
     modules[2] = new Module(backLeftModule, 2, DriveConstants.BackLeft);
@@ -80,9 +76,9 @@ public class Drive extends SubsystemBase {
     PhoenixOdometryThread.getInstance().start();
 
     AutoBuilder.configure(
-        robotState::getLatestPose2d,
+        RobotState::getLatestPose2d,
         this::setPose,
-        robotState::getRobotRelativeChassisSpeeds,
+        RobotState::getRobotRelativeChassisSpeeds,
         (speeds, feedforwards) -> setSwerveSpeed(speeds),
         new PPHolonomicDriveController(
             new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
@@ -140,7 +136,7 @@ public class Drive extends SubsystemBase {
 
     double[] sampleTimestamps = modules[0].getOdometryTimestamps();
 
-    robotState.addDriveMeasurements(
+    RobotState.addDriveMeasurements(
         sampleTimestamps,
         getSwervePositions(),
         gyroInputs.odometryYawPositions,
@@ -258,7 +254,7 @@ public class Drive extends SubsystemBase {
       RobotContainer.getDriveSim().setSimulationWorldPose(pose);
     }
     pose = new Pose2d(pose.getTranslation(), getRotation());
-    robotState.resetPose(pose, getSwervePositions());
+    RobotState.resetPose(pose, getSwervePositions());
   }
 
   public void resetGyro() {

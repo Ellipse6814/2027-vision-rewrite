@@ -27,19 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.littletonrobotics.junction.Logger;
 
 public class RobotState {
-
-  private static RobotState instance;
-
-  public static RobotState getRobotState() {
-    if (instance == null) {
-      instance = new RobotState();
-    }
-    return instance;
-  }
-
-  private RobotState() {}
-
-  private final SwerveDrivePoseEstimator poseEstimator =
+  private static final SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(
           new SwerveDriveKinematics(SwerveConstants.moduleTranslations),
           Rotation2d.kZero,
@@ -53,37 +41,37 @@ public class RobotState {
           VecBuilder.fill(0.05, 0.05, Units.degreesToRadians(5)),
           VecBuilder.fill(0.5, 0.5, 9999999));
 
-  private final TimeInterpolatableBuffer<Pose3d> fieldSpaceRobotPose =
+  private static final TimeInterpolatableBuffer<Pose3d> fieldSpaceRobotPose =
       TimeInterpolatableBuffer.createBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Double> robotYaw =
+  private static final TimeInterpolatableBuffer<Double> robotYaw =
       TimeInterpolatableBuffer.createDoubleBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Double> robotPitch =
+  private static final TimeInterpolatableBuffer<Double> robotPitch =
       TimeInterpolatableBuffer.createDoubleBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Double> robotRoll =
+  private static final TimeInterpolatableBuffer<Double> robotRoll =
       TimeInterpolatableBuffer.createDoubleBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Double> robotYawAngularVelocity =
+  private static final TimeInterpolatableBuffer<Double> robotYawAngularVelocity =
       TimeInterpolatableBuffer.createDoubleBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Double> robotRollAngularVelocity =
+  private static final TimeInterpolatableBuffer<Double> robotRollAngularVelocity =
       TimeInterpolatableBuffer.createDoubleBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Double> robotPitchAngularVelocity =
+  private static final TimeInterpolatableBuffer<Double> robotPitchAngularVelocity =
       TimeInterpolatableBuffer.createDoubleBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Double> robotXAceleration =
+  private static final TimeInterpolatableBuffer<Double> robotXAceleration =
       TimeInterpolatableBuffer.createDoubleBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Double> robotYAceleration =
+  private static final TimeInterpolatableBuffer<Double> robotYAceleration =
       TimeInterpolatableBuffer.createDoubleBuffer(StateConstants.kBufferHistorySizeSeconds);
-  private final TimeInterpolatableBuffer<Pose2d> visionPoses =
+  private static final TimeInterpolatableBuffer<Pose2d> visionPoses =
       TimeInterpolatableBuffer.createBuffer(StateConstants.kBufferHistorySizeSeconds);
 
-  private final AtomicReference<ChassisSpeeds> robotRelativeChassisSpeeds =
+  private static final AtomicReference<ChassisSpeeds> robotRelativeChassisSpeeds =
       new AtomicReference<>(new ChassisSpeeds());
-  private final AtomicReference<ChassisSpeeds> fieldRelativeChassisSpeeds =
+  private static final AtomicReference<ChassisSpeeds> fieldRelativeChassisSpeeds =
       new AtomicReference<>(new ChassisSpeeds());
-  private final AtomicReference<ChassisSpeeds> robotRelativeChassisSpeedsSetpoint =
+  private static final AtomicReference<ChassisSpeeds> robotRelativeChassisSpeedsSetpoint =
       new AtomicReference<>(new ChassisSpeeds());
-  private final AtomicReference<ChassisSpeeds> fieldRelativeChassisSpeedsSetpoint =
+  private static final AtomicReference<ChassisSpeeds> fieldRelativeChassisSpeedsSetpoint =
       new AtomicReference<>(new ChassisSpeeds());
 
-  public void addDriveMeasurements(
+  public static void addDriveMeasurements(
       double[] timestamps,
       SwerveModulePosition[] modulePositions,
       Rotation2d gyroAngles[],
@@ -99,82 +87,86 @@ public class RobotState {
     if (timestamps.length == 0) return;
     for (int i = 0; i < timestamps.length; i++) {
       poseEstimator.updateWithTime(timestamps[i], gyroAngles[i], modulePositions);
-      this.robotYaw.addSample(timestamps[i], gyroAngles[i].getRadians());
+      RobotState.robotYaw.addSample(timestamps[i], gyroAngles[i].getRadians());
 
       addFieldSpaceRobotPose(timestamps[i], new Pose3d(poseEstimator.getEstimatedPosition()));
     }
-    this.fieldRelativeChassisSpeeds.set(mesuredFieldRelativeChassisSpeeds);
-    this.robotRelativeChassisSpeeds.set(mesuredRobotRelativeChassisSpeeds);
+    RobotState.fieldRelativeChassisSpeeds.set(mesuredFieldRelativeChassisSpeeds);
+    RobotState.robotRelativeChassisSpeeds.set(mesuredRobotRelativeChassisSpeeds);
 
     double recentTimestamp = timestamps[timestamps.length - 1];
-    this.robotPitch.addSample(recentTimestamp, robotPitch.in(Radians));
-    this.robotRoll.addSample(recentTimestamp, robotRoll.in(Radians));
+    RobotState.robotPitch.addSample(recentTimestamp, robotPitch.in(Radians));
+    RobotState.robotRoll.addSample(recentTimestamp, robotRoll.in(Radians));
 
-    this.robotYawAngularVelocity.addSample(
+    RobotState.robotYawAngularVelocity.addSample(
         recentTimestamp, robotRelativeChassisSpeeds.get().omegaRadiansPerSecond);
-    this.robotRollAngularVelocity.addSample(
+    RobotState.robotRollAngularVelocity.addSample(
         recentTimestamp, rollAngularVelocity.in(RadiansPerSecond));
-    this.robotPitchAngularVelocity.addSample(
+    RobotState.robotPitchAngularVelocity.addSample(
         recentTimestamp, pitchAngularVelocity.in(RadiansPerSecond));
-    this.robotXAceleration.addSample(recentTimestamp, xAceleration.in(MetersPerSecondPerSecond));
-    this.robotYAceleration.addSample(recentTimestamp, yAceleration.in(MetersPerSecondPerSecond));
+    RobotState.robotXAceleration.addSample(recentTimestamp, xAceleration.in(MetersPerSecondPerSecond));
+    RobotState.robotYAceleration.addSample(recentTimestamp, yAceleration.in(MetersPerSecondPerSecond));
   }
 
-  public Pose2d getPredictedFieldSpaceRobotPose() {
+  public static Pose2d getPredictedFieldSpaceRobotPose() {
     // TODO
     return Pose2d.kZero;
   }
 
-  public void addVisionMeasurements(PoseObservation observation, Vector<N3> stdDevs) {
+  public static void addVisionMeasurements(PoseObservation observation) {
     visionPoses.addSample(observation.timestamp(), observation.pose().toPose2d());
-    poseEstimator.addVisionMeasurement(observation.pose().toPose2d(), observation.timestamp());
-    // System.out.println(
-    //     "Added vision measurement: "
-    //         + observation.pose().toPose2d().toString()
-    //         + " at time "
-    //         + observation.timestamp());
+
+    poseEstimator.addVisionMeasurement(observation.pose().toPose2d(), observation.timestamp(), observation.stddevs());
   }
 
-  public void addFieldSpaceRobotPose(double timestamp, Pose3d pose) {
+  public static void addFieldSpaceRobotPose(double timestamp, Pose3d pose) {
     fieldSpaceRobotPose.addSample(timestamp, pose);
   }
 
-  public void resetPose(Pose2d pose, SwerveModulePosition[] modulePositions) {
+  public static void resetPose(Pose2d pose, SwerveModulePosition[] modulePositions) {
     poseEstimator.resetPosition(getLatestYaw(), modulePositions, pose);
   }
 
   // TODO
   // Add getters and manual setters for all buffers and speeds
 
-  public ChassisSpeeds getRobotRelativeChassisSpeeds() {
+  public static ChassisSpeeds getRobotRelativeChassisSpeeds() {
     return robotRelativeChassisSpeeds.get();
   }
 
-  public ChassisSpeeds getFieldRelativeChassisSpeeds() {
+  public static ChassisSpeeds getFieldRelativeChassisSpeeds() {
     return fieldRelativeChassisSpeeds.get();
   }
 
-  public ChassisSpeeds getRobotRelativeChassisSpeedsSetpoint() {
+  public static ChassisSpeeds getRobotRelativeChassisSpeedsSetpoint() {
     return robotRelativeChassisSpeedsSetpoint.get();
   }
 
-  public ChassisSpeeds getFieldRelativeChassisSpeedsSetpoint() {
+  public static ChassisSpeeds getFieldRelativeChassisSpeedsSetpoint() {
     return fieldRelativeChassisSpeedsSetpoint.get();
   }
 
-  public Pose2d getLatestPose2d() {
+  public static Pose2d getLatestPose2d() {
     return fieldSpaceRobotPose.getInternalBuffer().lastEntry().getValue().toPose2d();
   }
 
-  private Rotation2d getLatestYaw() {
+  private static Rotation2d getLatestYaw() {
     var lastEntry = robotYaw.getInternalBuffer().lastEntry();
     if (lastEntry == null) {
       return Rotation2d.kZero;
     }
     return Rotation2d.fromRadians(lastEntry.getValue());
   }
+  
+  public static Pose2d getLatestVisionPose() {
+    var lastEntry = visionPoses.getInternalBuffer().lastEntry();
+    if (lastEntry == null) {
+      return new Pose2d();
+    }
+    return lastEntry.getValue();
+  }
 
-  public void updateLogger() {
+  public static void updateLogger() {
     Logger.recordOutput("RobotState/Odometry/Pose2D", poseEstimator.getEstimatedPosition());
     Logger.recordOutput(
         "RobotState/SwerveChassisSpeeds/FieldRelativeChassisSpeeds",
@@ -183,58 +175,11 @@ public class RobotState {
         "RobotState/SwerveChassisSpeeds/RobotRelativeChassisSpeeds",
         getRobotRelativeChassisSpeeds());
     Logger.recordOutput("RobotState/VisionPoseEstimate", getLatestVisionPose());
-
-    // Game specific
-    Logger.recordOutput("RobotState/Turret/FieldSpaceYaw", getTurretFieldSpaceYaw());
-    Logger.recordOutput("RobotState/Turret/RobotSpaceYaw", getTurretRobotSpaceYaw());
-    Logger.recordOutput("RobotState/Turret/FieldSpaceVelocity", getTurretFieldRelativeVelocity());
-    Logger.recordOutput("RobotState/Turret/RobotSpaceVelocity", getTurretRobotRelativeVelocity());
   }
 
-  // Game specific
-  private Rotation2d turretRobotRelativeYaw = Rotation2d.kZero;
-  private Rotation2d turretFieldRelativeYaw = Rotation2d.kZero;
-  private AngularVelocity turretRobotRelativeVelocity = RadiansPerSecond.of(0);
-  private AngularVelocity turretFieldRelativeVelocity = RadiansPerSecond.of(0);
-  private boolean isTurretAtSetpoint = true;
-
-  public void addTurretMeasurements(
-      Angle robotRelativeYaw, AngularVelocity robotRelativeVelocity, boolean isAtSetpoint) {
-    turretRobotRelativeYaw = Rotation2d.fromRadians(robotRelativeYaw.in(Radian));
-    turretFieldRelativeYaw = getLatestYaw().plus(turretRobotRelativeYaw);
-    isTurretAtSetpoint = isAtSetpoint;
-
-    turretRobotRelativeVelocity = robotRelativeVelocity;
-    turretFieldRelativeVelocity =
-        robotRelativeVelocity.plus(
-            RadiansPerSecond.of(getFieldRelativeChassisSpeeds().omegaRadiansPerSecond));
-  }
-
-  public Pose2d getLatestVisionPose() {
-    var lastEntry = visionPoses.getInternalBuffer().lastEntry();
-    if (lastEntry == null) {
-      return new Pose2d();
-    }
-    return lastEntry.getValue();
-  }
-
-  public Rotation2d getTurretFieldSpaceYaw() {
-    return turretFieldRelativeYaw;
-  }
-
-  public Rotation2d getTurretRobotSpaceYaw() {
-    return turretRobotRelativeYaw;
-  }
-
-  public AngularVelocity getTurretRobotRelativeVelocity() {
-    return turretRobotRelativeVelocity.copy();
-  }
-
-  public AngularVelocity getTurretFieldRelativeVelocity() {
-    return turretFieldRelativeVelocity.copy();
-  }
-
-  public boolean isTurretAtSetpoint() {
-    return isTurretAtSetpoint;
-  }
+  // ====================================================================
+  // ====================================================================
+  //                     SEASON SPECIFIC STUFF
+  // ====================================================================
+  // ====================================================================
 }

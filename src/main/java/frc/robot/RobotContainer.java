@@ -10,14 +10,12 @@ import edu.wpi.first.cscore.HttpCamera;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Commands.DriveCommands;
 import frc.robot.Commands.SwerveCharacterization;
 import frc.robot.Constants.SwerveConstants;
-import frc.robot.Constants.VisionConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveConstants;
 import frc.robot.subsystems.drive.GyroIO;
@@ -26,10 +24,6 @@ import frc.robot.subsystems.drive.GyroIOSim;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOTalonFXReal;
 import frc.robot.subsystems.drive.ModuleIOTalonFXSim;
-import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.VisionIOLimelight;
-import frc.robot.subsystems.vision.VisionIOTurret;
-import frc.robot.subsystems.vision.VisionSubsystem;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
@@ -39,6 +33,7 @@ public class RobotContainer {
 
   private final Drive m_Drive;
   private static SwerveDriveSimulation driveSimulation = null;
+  private final CommandXboxController controller = new CommandXboxController(0);
 
   private final LoggedDashboardChooser<Command> autoChooser;
 
@@ -110,9 +105,9 @@ public class RobotContainer {
     m_Drive.setDefaultCommand(
         DriveCommands.swerveDriveJoystick(
             m_Drive,
-            driverjoy,
-            m_DriveControls.getDriveY(),
-            m_DriveControls.getDriveOmega()));
+            () -> controller.getLeftX(),
+            () -> controller.getLeftY(),
+            () -> controller.getRightX()));
   }
 
   public Command getAutonomousCommand() {
@@ -139,7 +134,7 @@ public class RobotContainer {
         "RobotState/Pose Error",
         driveSimulation
             .getSimulatedDriveTrainPose()
-            .minus(RobotState.getRobotState().getLatestPose2d()));
+            .minus(RobotState.getLatestPose2d()));
 
     // simulated fuel
     Pose3d[] fuelPoses = SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel");
