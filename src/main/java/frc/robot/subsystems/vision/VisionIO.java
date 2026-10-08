@@ -14,7 +14,7 @@ public interface VisionIO {
     public boolean cameraConnected = false;
     public boolean cameraHasTarget = false;
 
-    public PoseObservation[] cameraAMegatagEstimate = new PoseObservation[0];
+    public PoseObservation[] poseObservations = new PoseObservation[0];
   }
 
   public record PoseObservation(

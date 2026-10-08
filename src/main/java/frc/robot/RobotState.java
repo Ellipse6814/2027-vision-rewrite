@@ -1,12 +1,10 @@
 package frc.robot;
 
 import static edu.wpi.first.units.Units.MetersPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Radian;
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -15,7 +13,6 @@ import edu.wpi.first.math.interpolation.TimeInterpolatableBuffer;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
@@ -104,8 +101,10 @@ public class RobotState {
         recentTimestamp, rollAngularVelocity.in(RadiansPerSecond));
     RobotState.robotPitchAngularVelocity.addSample(
         recentTimestamp, pitchAngularVelocity.in(RadiansPerSecond));
-    RobotState.robotXAceleration.addSample(recentTimestamp, xAceleration.in(MetersPerSecondPerSecond));
-    RobotState.robotYAceleration.addSample(recentTimestamp, yAceleration.in(MetersPerSecondPerSecond));
+    RobotState.robotXAceleration.addSample(
+        recentTimestamp, xAceleration.in(MetersPerSecondPerSecond));
+    RobotState.robotYAceleration.addSample(
+        recentTimestamp, yAceleration.in(MetersPerSecondPerSecond));
   }
 
   public static Pose2d getPredictedFieldSpaceRobotPose() {
@@ -116,7 +115,8 @@ public class RobotState {
   public static void addVisionMeasurements(PoseObservation observation) {
     visionPoses.addSample(observation.timestamp(), observation.pose().toPose2d());
 
-    poseEstimator.addVisionMeasurement(observation.pose().toPose2d(), observation.timestamp(), observation.stddevs());
+    poseEstimator.addVisionMeasurement(
+        observation.pose().toPose2d(), observation.timestamp(), observation.stddevs());
   }
 
   public static void addFieldSpaceRobotPose(double timestamp, Pose3d pose) {
@@ -147,7 +147,7 @@ public class RobotState {
   }
 
   public static Pose2d getLatestPose2d() {
-    return fieldSpaceRobotPose.getInternalBuffer().lastEntry().getValue().toPose2d();
+    return poseEstimator.getEstimatedPosition();
   }
 
   private static Rotation2d getLatestYaw() {
@@ -157,7 +157,7 @@ public class RobotState {
     }
     return Rotation2d.fromRadians(lastEntry.getValue());
   }
-  
+
   public static Pose2d getLatestVisionPose() {
     var lastEntry = visionPoses.getInternalBuffer().lastEntry();
     if (lastEntry == null) {

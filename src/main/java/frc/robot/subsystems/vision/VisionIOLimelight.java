@@ -19,17 +19,17 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.RobotState;
 import frc.robot.Util.LimelightHelpers;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 public class VisionIOLimelight implements VisionIO {
 
-  DoubleSubscriber latencySub;
-  DoubleArraySubscriber poseSub;
+  private final DoubleSubscriber latencySub;
+  private final DoubleArraySubscriber poseSub;
 
-  String cameraName;
-  Translation3d mountingTranslation;
-  Rotation3d mountingRotation;
+  private final String cameraName;
+  private final Translation3d mountingTranslation;
+  private final Rotation3d mountingRotation;
 
   public VisionIOLimelight(
       String cameraName, Translation3d mountingTranslation, Rotation3d mountingRotation) {
@@ -50,19 +50,18 @@ public class VisionIOLimelight implements VisionIO {
 
     setRobotOrientation();
     inputs.cameraName = cameraName;
-    inputs.cameraConnected =
-        ((Timer.getFPGATimestamp() - latencySub.getLastChange()) / 1000) < 250;
+    inputs.cameraConnected = ((Timer.getFPGATimestamp() - latencySub.getLastChange()) / 1000) < 250;
 
     inputs.cameraHasTarget = LimelightHelpers.getTV(cameraName);
 
-    List<PoseObservation> poseObservationsA = new LinkedList<>();
+    List<PoseObservation> poseObservations = new ArrayList<>();
     for (var sample : poseSub.readQueue()) {
       if (sample.value.length == 0) continue;
 
       double[] stddevsArray = LimelightHelpers.getStdDevs(cameraName);
       Vector<N3> stddevsVec = VecBuilder.fill(stddevsArray[6], stddevsArray[7], stddevsArray[11]);
 
-      poseObservationsA.add(
+      poseObservations.add(
           new PoseObservation(
               (sample.timestamp * 1e-6) - (sample.value[6] * 1e-6),
               parsePose(sample.value),
@@ -74,10 +73,7 @@ public class VisionIOLimelight implements VisionIO {
               PoseObservationType.MEGATAG_2));
     }
 
-    inputs.cameraAMegatagEstimate = new PoseObservation[poseObservationsA.size()];
-    for (int i = 0; i < poseObservationsA.size(); i++) {
-      inputs.cameraAMegatagEstimate[i] = poseObservationsA.get(i);
-    }
+    inputs.poseObservations = poseObservations.toArray(PoseObservation[]::new);
   }
 
   @Override
